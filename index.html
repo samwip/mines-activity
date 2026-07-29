@@ -188,7 +188,7 @@
   // Sincronizador da Batata Quente
   let potatoSyncInterval = null;
   let myUserId = null;
-  let activeRoomId = null; // Sala em que estou conectado
+  let activeRoomId = null;
 
   async function init(){
     try {
@@ -381,6 +381,28 @@
     }
   }
 
+  // DECLARAÇÃO DAS TROCAS DE TELAS GERAIS
+  function showGamePanel(){
+    document.getElementById('setupPanel').style.display = 'none';
+    document.getElementById('gamePanel').style.display = 'block';
+    document.getElementById('leaderboardPanel').style.display = 'none';
+    document.getElementById('dailyPanel').style.display = 'none';
+    document.getElementById('potatoPanel').style.display = 'none';
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
+    document.getElementById('potatoCreatePanel').style.display = 'none';
+  }
+
+  function showSetupPanel(){
+    document.getElementById('setupPanel').style.display = 'block';
+    document.getElementById('gamePanel').style.display = 'none';
+    document.getElementById('leaderboardPanel').style.display = 'none';
+    document.getElementById('dailyPanel').style.display = 'none';
+    document.getElementById('potatoPanel').style.display = 'none';
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
+    document.getElementById('potatoCreatePanel').style.display = 'none';
+    currentGame = null;
+  }
+
   // ==========================================
   // MULTIPLAYER - NAVEGADOR DE SALAS (ROOM BROWSER)
   // ==========================================
@@ -504,7 +526,6 @@
       const data = await resp.json();
 
       if (!resp.ok) {
-        // Se a sala não existir mais (foi deletada pelo dono que saiu)
         setStatus(data.error || 'A sala foi fechada pelo dono.', 'error');
         closePotato();
         return;
@@ -566,7 +587,6 @@
           indicator.style.color = '#ffaa00';
         }
 
-        // Desenha a grade
         drawPotatoGrid(data, isMyTurn && !data.isSpectator);
       }
 
@@ -587,7 +607,6 @@
         });
         document.getElementById('potatoTitle').innerHTML = winMsg;
 
-        // Dono pode resetar, outros esperam ou saem
         const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
         const startBtn = document.getElementById('startPotatoBtn');
         
