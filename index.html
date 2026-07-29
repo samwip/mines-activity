@@ -44,11 +44,11 @@
   .row{ display:flex; gap:10px; margin-bottom:12px; }
   .field{ flex:1; }
   .field label{ display:block; font-family:var(--font-m); font-size:.65rem; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px; }
-  .field input{
+  .field input, .field select{
     width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
     padding:10px 12px; border-radius:8px; font-family:var(--font-m); font-size:.9rem; transition:border .15s;
   }
-  .field input:focus{ border-color:var(--accent); outline:none; }
+  .field input:focus, .field select:focus{ border-color:var(--accent); outline:none; }
 
   .btn{
     width:100%; border:none; border-radius:8px; padding:14px; font-family:var(--font-d); font-weight:700;
@@ -310,9 +310,23 @@
             <input type="number" id="potMineCount" value="3" min="1" max="15">
           </div>
         </div>
-        <div class="field" style="margin-bottom:12px;">
-          <label>Vagas Máximas (2-16)</label>
-          <input type="number" id="potMaxPlayers" value="8" min="2" max="16">
+        <div class="row" style="margin-bottom:12px;">
+          <div class="field">
+            <label>Vagas Máximas (2-16)</label>
+            <input type="number" id="potMaxPlayers" value="8" min="2" max="16">
+          </div>
+          <div class="field">
+            <label>Tempo do Turno (Segundos)</label>
+            <select id="potTurnTimer">
+              <option value="5">5 segundos</option>
+              <option value="10">10 segundos</option>
+              <option value="15" selected>15 segundos</option>
+              <option value="20">20 segundos</option>
+              <option value="30">30 segundos</option>
+              <option value="45">45 segundos</option>
+              <option value="60">60 segundos</option>
+            </select>
+          </div>
         </div>
         <button class="btn btn-cashout" id="submitCreateRoomBtn">Abrir Sala</button>
         <button class="btn" id="cancelCreateRoomBtn" style="margin-top:8px; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Cancelar</button>
@@ -381,7 +395,7 @@
     }
   }
 
-  // DECLARAÇÃO DAS TROCAS DE TELAS GERAIS (CORRIGIDO)
+  // DECLARAÇÃO DAS TROCAS DE TELAS GERAIS
   function showGamePanel(){
     document.getElementById('setupPanel').style.display = 'none';
     document.getElementById('gamePanel').style.display = 'block';
@@ -447,15 +461,12 @@
             <span class="room-owner">Sala de ${room.ownerName}</span>
             <span class="room-details">💰 Aposta: ${room.betAmountFormatted} | Vagas: ${room.playersCount}/${room.maxPlayers}</span>
           </div>
-          <div class="room-actions" id="actions-${room.roomId}">
-            <!-- Os botões são inseridos via JS para segurança contra bloqueios de clique do Discord -->
-          </div>
+          <div class="room-actions" id="actions-${room.roomId}"></div>
         `;
         container.appendChild(card);
 
         const actionsDiv = document.getElementById(`actions-${room.roomId}`);
 
-        // Insere botão Jogar (apenas se for LOBBY)
         if (room.state === 'LOBBY') {
           const joinBtn = document.createElement('button');
           joinBtn.className = 'btn-sm btn-sm-join';
@@ -464,7 +475,6 @@
           actionsDiv.appendChild(joinBtn);
         }
 
-        // Insere botão Assistir em tempo real (Sempre disponível)
         const specBtn = document.createElement('button');
         specBtn.className = 'btn-sm btn-sm-spec';
         specBtn.textContent = '📺 Assistir';
@@ -486,12 +496,15 @@
     const betAmount = parseFloat(document.getElementById('potBetAmount').value);
     const mineCount = parseInt(document.getElementById('potMineCount').value);
     const maxPlayers = parseInt(document.getElementById('potMaxPlayers').value);
+    const turnTimer = parseInt(document.getElementById('potTurnTimer').value);
     setStatus('');
 
     try {
       const data = await api('potato/create', { betAmount, mineCount, maxPlayers });
       if (data.success) {
         activeRoomId = data.roomId;
+        // Envia configuração do timer escolhido
+        await api('potato/config', { roomId: activeRoomId, turnTimer });
         openPotatoRoom();
       }
     } catch (e) {
@@ -499,7 +512,6 @@
     }
   }
 
-  // DECLARAÇÃO SEGURA DAS FUNÇÕES DE CLIQUE DAS SALAS
   async function joinPotatoRoom(roomId) {
     try {
       await api('potato/join', { roomId });
@@ -531,7 +543,7 @@
     document.getElementById('potatoPanel').style.display = 'block';
 
     syncPotato();
-    potatoSyncInterval = setInterval(syncPotato, 1000); // Polling rápido de 1 segundo
+    potatoSyncInterval = setInterval(syncPotato, 1000); 
   }
 
   async function syncPotato() {
@@ -553,24 +565,49 @@
         document.getElementById('potatoGameZone').style.display = 'none';
         document.getElementById('potatoTitle').textContent = `🔥 Sala de ${data.players[0].username} (Pote: ${data.potFormatted})`;
 
-        // Configuração de Vagas do Dono
+        // Configuração de Vagas e Tempo do Dono
         const configZone = document.getElementById('potatoConfigZone');
         const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
         if (isOwner) {
           configZone.innerHTML = `
-            <div class="field">
-              <label>👥 Alterar Limite de Vagas:</label>
-              <input type="number" id="potatoMaxPlayersInput" value="${data.maxPlayers}" min="2" max="16" style="padding: 6px 12px; margin-top: 4px;">
+            <div class="row" style="gap:10px; margin-bottom:12px;">
+              <div class="field">
+                <label>👥 Limite de Vagas:</label>
+                <input type="number" id="potatoMaxPlayersInput" value="${data.maxPlayers}" min="2" max="16" style="padding: 6px 12px; margin-top: 4px;">
+              </div>
+              <div class="field">
+                <label>⏱️ Tempo do Turno:</label>
+                <select id="potatoTurnTimerInput" style="padding: 6px 12px; margin-top: 4px;">
+                  <option value="5" ${data.turnTimer === 5 ? 'selected' : ''}>5s</option>
+                  <option value="10" ${data.turnTimer === 10 ? 'selected' : ''}>10s</option>
+                  <option value="15" ${data.turnTimer === 15 ? 'selected' : ''}>15s</option>
+                  <option value="20" ${data.turnTimer === 20 ? 'selected' : ''}>20s</option>
+                  <option value="30" ${data.turnTimer === 30 ? 'selected' : ''}>30s</option>
+                  <option value="60" ${data.turnTimer === 60 ? 'selected' : ''}>60s</option>
+                </select>
+              </div>
             </div>
           `;
-          const input = document.getElementById('potatoMaxPlayersInput');
-          input.onchange = async (e) => {
+          
+          const maxInput = document.getElementById('potatoMaxPlayersInput');
+          maxInput.onchange = async (e) => {
             try {
-              await api('potato/config', { maxPlayers: parseInt(e.target.value) });
+              await api('potato/config', { roomId: activeRoomId, maxPlayers: parseInt(e.target.value) });
+            } catch (err) { console.error(err); }
+          };
+
+          const timerInput = document.getElementById('potatoTurnTimerInput');
+          timerInput.onchange = async (e) => {
+            try {
+              await api('potato/config', { roomId: activeRoomId, turnTimer: parseInt(e.target.value) });
             } catch (err) { console.error(err); }
           };
         } else {
-          configZone.innerHTML = `<p style="text-align:center; font-size:.8rem; color:var(--text-dim);">👥 Vagas na Sala: <b>${data.players.length} de ${data.maxPlayers}</b></p>`;
+          configZone.innerHTML = `
+            <p style="text-align:center; font-size:.8rem; color:var(--text-dim);">
+              👥 Vagas: <b>${data.players.length} de ${data.maxPlayers}</b> | ⏱️ Tempo: <b>${data.turnTimer}s</b>
+            </p>
+          `;
         }
 
         // Lista jogadores ativos
@@ -593,18 +630,19 @@
         document.getElementById('potatoGameZone').style.display = 'block';
         document.getElementById('potatoTitle').textContent = `🔥 Jogo de ${data.players[0].username} (Prêmio: ${data.potFormatted} | 👀 ${data.spectatorsCount})`;
 
+        // Calcula tempo restante do turno do jogador ativo (Ticking em tempo real)
+        const secRemaining = Math.max(0, Math.ceil((data.turnDeadline - Date.now()) / 1000));
+
         // Quem joga agora?
         const isMyTurn = data.activePlayer.id === myUserId;
         const indicator = document.getElementById('potatoTurnIndicator');
         if (isMyTurn) {
-          indicator.textContent = '👉 SUA VEZ! Escolha uma casa com cuidado!';
-          indicator.style.color = 'var(--danger)';
+          indicator.innerHTML = `👉 SUA VEZ! Escolha em: <b style="color:var(--danger); font-size:1.15rem; text-shadow:0 0 8px rgba(255,77,77,.3);">${secRemaining}s</b>`;
         } else {
-          indicator.textContent = `⏳ Vez de: ${data.activePlayer.username} ...`;
+          indicator.innerHTML = `⏳ Vez de: ${data.activePlayer.username} (${secRemaining}s) ...`;
           indicator.style.color = '#ffaa00';
         }
 
-        // Desenha a grade
         drawPotatoGrid(data, isMyTurn && !data.isSpectator);
       }
 
@@ -618,7 +656,6 @@
 
         drawPotatoGrid(data, false);
 
-        // Mostra quem faturou
         let winMsg = '💰 Sobreviventes ganharam:<br>';
         data.winners.forEach(w => {
           winMsg += `<b>${w.username}</b> faturou <b>${w.winShare}</b>!<br>`;
@@ -720,7 +757,7 @@
 
     document.getElementById('setupPanel').style.display = 'none';
     document.getElementById('gamePanel').style.display = 'none';
-    document.getElementById('leaderboardPanel').style.display = 'block';
+    document.getElementById('leaderboardPanel').style.display = 'none';
     document.getElementById('dailyPanel').style.display = 'block';
     document.getElementById('potatoPanel').style.display = 'none';
     document.getElementById('potatoBrowserPanel').style.display = 'none';
