@@ -254,13 +254,16 @@
 
       <!-- TELA DA BATATA QUENTE (MULTIPLAYER) -->
       <div class="panel" id="potatoPanel" style="display:none;">
-        <div class="potential" id="potatoTitle">🔥 Batata Quente Multijogador</div>
+        <div class="potential" id="potatoTitle">🔥 Batata Quente</div>
         
         <!-- Estado do Lobby -->
         <div id="potatoLobbyZone">
-          <p style="font-size:.85rem; color:var(--text-dim); text-align:center;">Cada jogador entra com <b>10 moedas</b>. Quem explodir a bomba sai de mãos vazias, e os sobreviventes dividem o prêmio total!</p>
+          <div id="potatoConfigZone" style="margin-bottom: 12px;"></div>
           <div class="potato-lobby-list" id="potatoPlayers"></div>
-          <button class="btn btn-cashout" id="joinPotatoBtn">Participar (Custo: 10 Moedas)</button>
+          <div class="row" style="margin-top: 14px; gap:8px;">
+            <button class="btn btn-cashout" id="joinPotatoBtn" style="flex:1;">Jogar (Custo: 10)</button>
+            <button class="btn" id="spectatePotatoBtn" style="flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text);">📺 Assistir</button>
+          </div>
           <button class="btn btn-play" id="startPotatoBtn" style="margin-top:8px;" disabled>Iniciar Partida (Min: 2 Jogadores)</button>
         </div>
 
@@ -289,6 +292,7 @@
     document.getElementById('potatoBtn').addEventListener('click', openPotato);
     document.getElementById('closePotatoBtn').addEventListener('click', closePotato);
     document.getElementById('joinPotatoBtn').addEventListener('click', joinPotato);
+    document.getElementById('spectatePotatoBtn').addEventListener('click', spectatePotato);
     document.getElementById('startPotatoBtn').addEventListener('click', startPotato);
   }
 
@@ -329,7 +333,7 @@
   }
 
   // ==========================================
-  // LÓGICA DA BATATA QUENTE (MULTIPLAYER REAL-TIME BY POLLING)
+  // LÓGICA DA BATATA QUENTE (MULTIPLAYER)
   // ==========================================
   async function openPotato(){
     setStatus('');
@@ -339,7 +343,6 @@
     document.getElementById('dailyPanel').style.display = 'none';
     document.getElementById('potatoPanel').style.display = 'block';
 
-    // Inicia a sincronização rápida (atualiza a cada 1 segundo)
     syncPotato();
     potatoSyncInterval = setInterval(syncPotato, 1000);
   }
@@ -348,19 +351,43 @@
     try {
       const data = await api('potato/state');
       
-      // Atualiza o saldo do topo silenciosamente
       const sResp = await fetch('/api/mines/state', {
         headers: { 'Authorization': 'Bearer ' + accessToken }
       });
       const sData = await sResp.json();
       if (sResp.ok) document.getElementById('saldoVal').textContent = sData.saldoFormatado;
 
+      // Renderiza as configurações de Vagas do Lobby
+      const configZone = document.getElementById('potatoConfigZone');
+      if (data.state === 'LOBBY') {
+        const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
+        if (isOwner) {
+          configZone.innerHTML = `
+            <div class="field">
+              <label>⚙️ Vagas na Sala (Dono):</label>
+              <input type="number" id="potatoMaxPlayersInput" value="${data.maxPlayers}" min="2" max="16" style="padding: 6px 12px; margin-top: 4px;">
+            </div>
+          `;
+          // Listener para atualizar vagas ao mudar o número
+          const input = document.getElementById('potatoMaxPlayersInput');
+          input.onchange = async (e) => {
+            try {
+              await api('potato/config', { maxPlayers: parseInt(e.target.value) });
+            } catch (err) { console.error(err); }
+          };
+        } else {
+          configZone.innerHTML = `<p style="text-align:center; font-size:.8rem; color:var(--text-dim);">👥 Vagas na Sala: <b>${data.players.length} de ${data.maxPlayers}</b></p>`;
+        }
+      } else {
+        configZone.innerHTML = '';
+      }
+
       if (data.state === 'LOBBY') {
         document.getElementById('potatoLobbyZone').style.display = 'block';
         document.getElementById('potatoGameZone').style.display = 'none';
         document.getElementById('potatoTitle').textContent = `🔥 Batata Quente (Pote: ${data.potFormatted})`;
 
-        // Lista jogadores logados
+        // Lista jogadores ativos
         const container = document.getElementById('potatoPlayers');
         container.innerHTML = '';
         data.players.forEach(p => {
@@ -370,20 +397,28 @@
           container.appendChild(el);
         });
 
-        // Configura botões de Entrar / Começar
-        const alreadyIn = data.players.some(p => p.id === myUserId);
+        // Configura botões de Ações (Entrar / Assistir)
+        const alreadyIn = data.isPlayer;
+        const alreadySpectating = data.isSpectator;
+
         const joinBtn = document.getElementById('joinPotatoBtn');
-        joinBtn.disabled = alreadyIn;
-        joinBtn.textContent = alreadyIn ? 'Aguardando Início...' : 'Participar (Custo: 10 Moedas)';
+        joinBtn.disabled = alreadyIn || data.players.length >= data.maxPlayers;
+        joinBtn.textContent = alreadyIn ? 'No Jogo (Aguardando...)' : 'Jogar (Custo: 10)';
+
+        const specBtn = document.getElementById('spectatePotatoBtn');
+        specBtn.disabled = alreadyIn || alreadySpectating;
+        specBtn.textContent = alreadySpectating ? '📺 Assistindo' : '📺 Assistir';
 
         const startBtn = document.getElementById('startPotatoBtn');
-        startBtn.disabled = data.players.length < 2 || !alreadyIn;
+        // Só o primeiro jogador (dono da sala) pode iniciar a partida
+        const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
+        startBtn.disabled = data.players.length < 2 || !isOwner;
       } 
       
       else if (data.state === 'PLAYING') {
         document.getElementById('potatoLobbyZone').style.display = 'none';
         document.getElementById('potatoGameZone').style.display = 'block';
-        document.getElementById('potatoTitle').textContent = `🔥 Batata Quente (Prêmio: ${data.potFormatted})`;
+        document.getElementById('potatoTitle').textContent = `🔥 Batata Quente (Prêmio: ${data.potFormatted} | 👀 ${data.spectatorsCount})`;
 
         // Quem joga agora?
         const isMyTurn = data.activePlayer.id === myUserId;
@@ -396,8 +431,8 @@
           indicator.style.color = '#ffaa00';
         }
 
-        // Desenha a grade coletiva
-        drawPotatoGrid(data, isMyTurn);
+        // Desenha a grade (Se for espectador, não clica em nada)
+        drawPotatoGrid(data, isMyTurn && !data.isSpectator);
       }
 
       else if (data.state === 'ENDED') {
@@ -408,10 +443,9 @@
         indicator.textContent = `💥 BOOM! ${data.loser.username} explodiu!`;
         indicator.style.color = 'var(--danger)';
 
-        // Desenha grade final mostrando onde estavam as minas
         drawPotatoGrid(data, false);
 
-        // Mostra quem faturou a divisão
+        // Mostra quem faturou
         let winMsg = '💰 Prêmios divididos para os sobreviventes:<br>';
         data.winners.forEach(w => {
           winMsg += `<b>${w.username}</b> faturou <b>${w.winShare}</b>!<br>`;
@@ -419,23 +453,30 @@
 
         document.getElementById('potatoTitle').innerHTML = winMsg;
 
-        // Se o primeiro jogador do Lobby clicar em Sair, ele pode resetar o lobby
+        // Se for o dono da sala, pode resetar o lobby
+        const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
         const joinBtn = document.getElementById('joinPotatoBtn');
-        joinBtn.disabled = false;
-        joinBtn.textContent = 'Jogar Novamente (Resetar Lobby)';
-        joinBtn.onclick = async () => {
-          await api('potato/reset');
-          joinBtn.onclick = joinPotato; // restaura click de entrar
-          syncPotato();
-        };
-        document.getElementById('potatoLobbyZone').style.display = 'block';
+        
+        if (isOwner) {
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Jogar Novamente (Resetar Lobby)';
+          joinBtn.onclick = async () => {
+            await api('potato/reset');
+            joinBtn.onclick = joinPotato;
+            syncPotato();
+          };
+          document.getElementById('potatoLobbyZone').style.display = 'block';
+        } else {
+          joinBtn.disabled = true;
+          joinBtn.textContent = 'Aguardando Dono Resetar...';
+        }
       }
     } catch (e) {
       console.error(e);
     }
   }
 
-  function drawPotatoGrid(data, isMyTurn) {
+  function drawPotatoGrid(data, canClick) {
     const grid = document.getElementById('potatoGrid');
     grid.innerHTML = '';
 
@@ -444,7 +485,7 @@
       tile.className = 'tile';
       
       const isRevealed = data.revealedSquares.includes(i);
-      const isMine = data.minePositions.includes(i); // só vem se o jogo acabou
+      const isMine = data.minePositions.includes(i); 
 
       if (isRevealed) {
         tile.classList.add('revealed', 'safe');
@@ -453,7 +494,7 @@
         tile.classList.add('revealed', 'mine');
         tile.textContent = '💣';
       } else {
-        if (isMyTurn && data.state === 'PLAYING') {
+        if (canClick && data.state === 'PLAYING') {
           tile.addEventListener('click', () => clickPotato(i));
         } else {
           tile.classList.add('disabled');
@@ -473,6 +514,16 @@
     }
   }
 
+  async function spectatePotato() {
+    setStatus('');
+    try {
+      await api('potato/spectate');
+      syncPotato();
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
   async function startPotato() {
     setStatus('');
     try {
@@ -485,7 +536,7 @@
 
   async function clickPotato(index) {
     try {
-      const resp = await api('potato/click', { squareIndex: index });
+      await api('potato/click', { squareIndex: index });
       syncPotato();
     } catch (e) {
       setStatus(e.message, 'error');
