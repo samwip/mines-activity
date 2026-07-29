@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>Mines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e1016; --panel:#171a22; --panel2:#1e2230; --line:#2a2f3d;
+    --accent:#a238ff; --accent-dim:#7c1fd9; --danger:#ff4d4d; --success:#26e07a;
+    --text:#ecedf2; --text-dim:#9aa0b4;
+    --font-d:'Syne',sans-serif; --font-b:'DM Sans',sans-serif; --font-m:'DM Mono',monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--font-b);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .wrap{ max-width:420px; width:100%; }
+  .top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .title{ font-family:var(--font-d); font-weight:800; font-size:1.4rem; }
+  .title span{ color:var(--accent); }
+  .saldo{ font-family:var(--font-m); font-size:.85rem; color:var(--text-dim); }
+  .saldo b{ color:var(--success); }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:14px; }
+
+  .row{ display:flex; gap:10px; margin-bottom:12px; }
+  .field{ flex:1; }
+  .field label{ display:block; font-family:var(--font-m); font-size:.65rem; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px; }
+  .field input{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-family:var(--font-m); font-size:.9rem;
+  }
+
+  .btn{
+    width:100%; border:none; border-radius:8px; padding:14px; font-family:var(--font-d); font-weight:700;
+    font-size:.95rem; cursor:pointer; transition:opacity .15s;
+  }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-play{ background:var(--accent); color:#fff; }
+  .btn-cashout{ background:var(--success); color:#08130c; }
+
+  .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+  .tile{
+    aspect-ratio:1; background:var(--panel2); border:1px solid var(--line); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-size:1.4rem; cursor:pointer;
+    transition:transform .1s, background .15s;
+  }
+  .tile:hover:not(.revealed):not(.disabled){ transform:scale(1.05); border-color:var(--accent); }
+  .tile.revealed{ cursor:default; }
+  .tile.safe{ background:rgba(38,224,122,.15); border-color:var(--success); }
+  .tile.mine{ background:rgba(255,77,77,.15); border-color:var(--danger); }
+  .tile.disabled{ opacity:.5; cursor:default; }
+
+  .status{ font-family:var(--font-m); font-size:.8rem; color:var(--text-dim); text-align:center; margin-bottom:14px; min-height:1.2em; }
+  .status.error{ color:var(--danger); }
+  .status.success{ color:var(--success); }
+
+  .potential{ text-align:center; font-family:var(--font-m); font-size:.85rem; color:var(--accent); margin-bottom:10px; min-height:1.2em; }
+
+  .loading{ text-align:center; color:var(--text-dim); font-family:var(--font-m); padding:60px 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <div class="loading" id="loadingMsg">conectando com o Discord...</div>
+</div>
+
+<script type="module">
+  import { DiscordSDK } from 'https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@2.5.0/output/index.mjs';
+
+  // ⚠️ troque pelo Application ID do bot de Mines
+  const CLIENT_ID = '1393867072542474391';
+
+  const app = document.getElementById('app');
+  let accessToken = null;
+  let currentGame = null;
+
+  async function init(){
+    try {
+      const discordSdk = new DiscordSDK(CLIENT_ID);
+      await discordSdk.ready();
+
+      const { code } = await discordSdk.commands.authorize({
+        client_id: CLIENT_ID,
+        response_type: 'code',
+        state: '',
+        prompt: 'none',
+        scope: ['identify']
+      });
+
+      const tokenResp = await fetch('/api/mines/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const tokenData = await tokenResp.json();
+      if (!tokenResp.ok) throw new Error(tokenData.error || 'falha ao trocar token');
+      accessToken = tokenData.access_token;
+
+      await discordSdk.commands.authenticate({ access_token: accessToken });
+
+      renderGame();
+      refreshState();
+    } catch (e) {
+      console.error(e);
+      app.innerHTML = `<div class="loading">Não consegui conectar com o Discord.<br>Abra isso de dentro de uma Activity.</div>`;
+    }
+  }
+
+  async function api(path, body){
+    const resp = await fetch('/api/mines/' + path, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + accessToken
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'erro desconhecido');
+    return data;
+  }
+
+  function renderGame(){
+    app.innerHTML = `
+      <div class="top">
+        <div class="title">Mi<span>nes</span></div>
+        <div class="saldo">saldo: <b id="saldoVal">—</b></div>
+      </div>
+
+      <div class="panel" id="setupPanel">
+        <div class="row">
+          <div class="field">
+            <label>Minas (1–15)</label>
+            <input type="number" id="mineCount" value="3" min="1" max="15">
+          </div>
+          <div class="field">
+            <label>Aposta</label>
+            <input type="number" id="betAmount" value="1" min="0.01" step="0.01">
+          </div>
+        </div>
+        <button class="btn btn-play" id="playBtn">Jogar</button>
+      </div>
+
+      <div class="panel" id="gamePanel" style="display:none;">
+        <div class="potential" id="potentialVal"></div>
+        <div class="grid" id="grid"></div>
+        <button class="btn btn-cashout" id="cashoutBtn">Sacar</button>
+      </div>
+
+      <div class="status" id="statusMsg"></div>
+    `;
+
+    document.getElementById('playBtn').addEventListener('click', startGame);
+    document.getElementById('cashoutBtn').addEventListener('click', cashout);
+  }
+
+  function setStatus(msg, type){
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg || '';
+    el.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  async function refreshState(){
+    try {
+      const data = await api('state');
+      document.getElementById('saldoVal').textContent = data.saldoFormatado;
+      if (data.game) {
+        currentGame = data.game;
+        showGamePanel();
+        drawGrid();
+      }
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  function showGamePanel(){
+    document.getElementById('setupPanel').style.display = 'none';
+    document.getElementById('gamePanel').style.display = 'block';
+  }
+  function showSetupPanel(){
+    document.getElementById('setupPanel').style.display = 'block';
+    document.getElementById('gamePanel').style.display = 'none';
+    currentGame = null;
+  }
+
+  function drawGrid(revealMines){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 16; i++){
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      const isRevealed = currentGame.revealedSquares?.includes(i);
+      const isMineHere = revealMines?.includes(i);
+
+      if (isRevealed){
+        tile.classList.add('revealed', 'safe');
+        tile.textContent = '💎';
+      } else if (isMineHere){
+        tile.classList.add('revealed', 'mine');
+        tile.textContent = '💣';
+      } else if (revealMines){
+        tile.classList.add('disabled');
+      } else {
+        tile.addEventListener('click', () => reveal(i));
+      }
+      grid.appendChild(tile);
+    }
+  }
+
+  async function startGame(){
+    const mineCount = parseInt(document.getElementById('mineCount').value);
+    const betAmount = parseFloat(document.getElementById('betAmount').value);
+    setStatus('');
+    try {
+      const data = await api('start', { mineCount, betAmount });
+      currentGame = data.game;
+      document.getElementById('saldoVal').textContent = 'R$ ' + data.saldo.toFixed(2).replace('.', ',');
+      showGamePanel();
+      drawGrid();
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  async function reveal(index){
+    try {
+      const data = await api('reveal', { squareIndex: index });
+      if (data.hit_mine){
+        setStatus('💥 Você pisou numa mina! Perdeu a aposta.', 'error');
+        drawGrid(data.minePositions);
+        document.getElementById('saldoVal').textContent = 'R$ ' + data.saldo.toFixed(2).replace('.', ',');
+        setTimeout(showSetupPanel, 2500);
+        return;
+      }
+      currentGame = data.game;
+      document.getElementById('potentialVal').textContent =
+        data.potential_win ? `possível ganho: R$ ${data.potential_win.toFixed(2).replace('.', ',')} (${data.multiplier}x)` : '';
+      drawGrid();
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  async function cashout(){
+    try {
+      const data = await api('cashout');
+      setStatus(`✅ Sacou R$ ${data.winAmount.toFixed(2).replace('.', ',')} (${data.multiplier}x)`, 'success');
+      document.getElementById('saldoVal').textContent = 'R$ ' + data.saldo.toFixed(2).replace('.', ',');
+      setTimeout(showSetupPanel, 2000);
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
