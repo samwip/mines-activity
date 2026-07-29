@@ -74,7 +74,6 @@
 <script type="module">
   import { DiscordSDK } from 'https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@2.5.0/output/index.mjs';
 
-  // ⚠️ troque pelo Application ID do bot de Mines
   const CLIENT_ID = '794343189896232971';
 
   const app = document.getElementById('app');
@@ -109,7 +108,7 @@
       refreshState();
     } catch (e) {
       console.error(e);
-      app.innerHTML = `<div class="loading">Não consegui conectar com o Discord.<br>Abra isso de dentro de uma Activity.</div>`;
+      app.innerHTML = `<div class="loading" style="color:red; font-size:14px; padding:20px; line-height:1.5;">❌ Erro de conexão:<br><br><b>${e.message || e}</b><br><br>Verifique as portas na Square Cloud e os links no portal.</div>`;
     }
   }
 
