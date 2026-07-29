@@ -381,7 +381,7 @@
     }
   }
 
-  // DECLARAÇÃO DAS TROCAS DE TELAS GERAIS
+  // DECLARAÇÃO DAS TROCAS DE TELAS GERAIS (CORRIGIDO)
   function showGamePanel(){
     document.getElementById('setupPanel').style.display = 'none';
     document.getElementById('gamePanel').style.display = 'block';
@@ -447,12 +447,29 @@
             <span class="room-owner">Sala de ${room.ownerName}</span>
             <span class="room-details">💰 Aposta: ${room.betAmountFormatted} | Vagas: ${room.playersCount}/${room.maxPlayers}</span>
           </div>
-          <div class="room-actions">
-            ${room.state === 'LOBBY' ? `<button class="btn-sm btn-sm-join" onclick="joinPotatoRoom('${room.roomId}')">Jogar</button>` : ''}
-            <button class="btn-sm btn-sm-spec" onclick="spectatePotatoRoom('${room.roomId}')">📺 Assistir</button>
+          <div class="room-actions" id="actions-${room.roomId}">
+            <!-- Os botões são inseridos via JS para segurança contra bloqueios de clique do Discord -->
           </div>
         `;
         container.appendChild(card);
+
+        const actionsDiv = document.getElementById(`actions-${room.roomId}`);
+
+        // Insere botão Jogar (apenas se for LOBBY)
+        if (room.state === 'LOBBY') {
+          const joinBtn = document.createElement('button');
+          joinBtn.className = 'btn-sm btn-sm-join';
+          joinBtn.textContent = 'Jogar';
+          joinBtn.addEventListener('click', () => joinPotatoRoom(room.roomId));
+          actionsDiv.appendChild(joinBtn);
+        }
+
+        // Insere botão Assistir em tempo real (Sempre disponível)
+        const specBtn = document.createElement('button');
+        specBtn.className = 'btn-sm btn-sm-spec';
+        specBtn.textContent = '📺 Assistir';
+        specBtn.addEventListener('click', () => spectatePotatoRoom(room.roomId));
+        actionsDiv.appendChild(specBtn);
       });
     } catch (e) {
       console.error(e);
@@ -482,8 +499,8 @@
     }
   }
 
-  // Definições de Click globais para as funções do card do Lobby
-  window.joinPotatoRoom = async (roomId) => {
+  // DECLARAÇÃO SEGURA DAS FUNÇÕES DE CLIQUE DAS SALAS
+  async function joinPotatoRoom(roomId) {
     try {
       await api('potato/join', { roomId });
       activeRoomId = roomId;
@@ -491,9 +508,9 @@
     } catch (e) {
       alert(e.message);
     }
-  };
+  }
 
-  window.spectatePotatoRoom = async (roomId) => {
+  async function spectatePotatoRoom(roomId) {
     try {
       await api('potato/spectate', { roomId });
       activeRoomId = roomId;
@@ -501,7 +518,7 @@
     } catch (e) {
       alert(e.message);
     }
-  };
+  }
 
   // ==========================================
   // LÓGICA DO LOBBY INTERNO / PARTIDA DA BATATA
@@ -514,7 +531,7 @@
     document.getElementById('potatoPanel').style.display = 'block';
 
     syncPotato();
-    potatoSyncInterval = setInterval(syncPotato, 1000); // Polling rápido interno de 1 segundo
+    potatoSyncInterval = setInterval(syncPotato, 1000); // Polling rápido de 1 segundo
   }
 
   async function syncPotato() {
@@ -587,6 +604,7 @@
           indicator.style.color = '#ffaa00';
         }
 
+        // Desenha a grade
         drawPotatoGrid(data, isMyTurn && !data.isSpectator);
       }
 
@@ -702,7 +720,7 @@
 
     document.getElementById('setupPanel').style.display = 'none';
     document.getElementById('gamePanel').style.display = 'none';
-    document.getElementById('leaderboardPanel').style.display = 'none';
+    document.getElementById('leaderboardPanel').style.display = 'block';
     document.getElementById('dailyPanel').style.display = 'block';
     document.getElementById('potatoPanel').style.display = 'none';
     document.getElementById('potatoBrowserPanel').style.display = 'none';
