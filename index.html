@@ -9,9 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0e1016; --panel:#171a22; --panel2:#1e2230; --line:#2a2f3d;
-    --accent:#a238ff; --accent-dim:#7c1fd9; --danger:#ff4d4d; --success:#26e07a;
-    --text:#ecedf2; --text-dim:#9aa0b4;
+    --bg:#080a10; --panel:#111422; --panel2:#161b2e; --line:#232a45;
+    --accent:#8a2be2; --accent-glow:rgba(138,43,226,.4);
+    --danger:#ff4d4d; --success:#26e07a;
+    --text:#ecedf2; --text-dim:#868ea8;
     --font-d:'Syne',sans-serif; --font-b:'DM Sans',sans-serif; --font-m:'DM Mono',monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -21,37 +22,43 @@
   }
   .wrap{ max-width:420px; width:100%; }
   .top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-  .title{ font-family:var(--font-d); font-weight:800; font-size:1.4rem; }
-  .title span{ color:var(--accent); }
+  .title{ font-family:var(--font-d); font-weight:800; font-size:1.4rem; letter-spacing:-0.5px; }
+  .title span{ color:var(--accent); text-shadow:0 0 10px var(--accent-glow); }
   .header-actions{ display:flex; gap:6px; align-items:center; }
   
   .btn-action{
     background:var(--panel2); border:1px solid var(--line); color:var(--text);
     padding:8px 10px; border-radius:8px; font-size:.8rem; cursor:pointer; font-family:var(--font-b);
-    display:flex; align-items:center; gap:4px; transition:border .15s;
+    display:flex; align-items:center; gap:4px; transition:all .15s ease-in-out;
   }
-  .btn-action:hover{ border-color:var(--accent); }
+  .btn-action:hover{ border-color:var(--accent); background:var(--panel); transform:translateY(-1px); }
 
   .saldo{ font-family:var(--font-m); font-size:.85rem; color:var(--text-dim); margin-left:6px; }
-  .saldo b{ color:var(--success); }
+  .saldo b{ color:var(--success); text-shadow:0 0 8px rgba(38,224,122,.2); }
 
-  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:14px; }
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);
+  }
 
   .row{ display:flex; gap:10px; margin-bottom:12px; }
   .field{ flex:1; }
   .field label{ display:block; font-family:var(--font-m); font-size:.65rem; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px; }
   .field input{
     width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
-    padding:10px 12px; border-radius:8px; font-family:var(--font-m); font-size:.9rem;
+    padding:10px 12px; border-radius:8px; font-family:var(--font-m); font-size:.9rem; transition:border .15s;
   }
+  .field input:focus{ border-color:var(--accent); outline:none; }
 
   .btn{
     width:100%; border:none; border-radius:8px; padding:14px; font-family:var(--font-d); font-weight:700;
-    font-size:.95rem; cursor:pointer; transition:opacity .15s;
+    font-size:.95rem; cursor:pointer; transition:all .2s ease-in-out;
   }
   .btn:disabled{ opacity:.4; cursor:not-allowed; }
-  .btn-play{ background:var(--accent); color:#fff; }
-  .btn-cashout{ background:var(--success); color:#08130c; }
+  .btn-play{ background:var(--accent); color:#fff; box-shadow:0 4px 15px var(--accent-glow); }
+  .btn-play:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 6px 20px var(--accent-glow); }
+  .btn-cashout{ background:var(--success); color:#08130c; box-shadow:0 4px 15px rgba(38,224,122,.2); }
+  .btn-cashout:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 6px 20px rgba(38,224,122,.3); }
 
   .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
   .tile{
@@ -59,10 +66,10 @@
     display:flex; align-items:center; justify-content:center; font-size:1.4rem; cursor:pointer;
     transition:transform .1s, background .15s;
   }
-  .tile:hover:not(.revealed):not(.disabled){ transform:scale(1.05); border-color:var(--accent); }
+  .tile:hover:not(.revealed):not(.disabled){ transform:scale(1.05); border-color:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
   .tile.revealed{ cursor:default; }
-  .tile.safe{ background:rgba(38,224,122,.15); border-color:var(--success); }
-  .tile.mine{ background:rgba(255,77,77,.15); border-color:var(--danger); }
+  .tile.safe{ background:rgba(38,224,122,.12); border-color:var(--success); }
+  .tile.mine{ background:rgba(255,77,77,.12); border-color:var(--danger); }
   .tile.disabled{ opacity:.5; cursor:default; }
 
   .status{ font-family:var(--font-m); font-size:.8rem; color:var(--text-dim); text-align:center; margin-bottom:14px; min-height:1.2em; }
@@ -105,16 +112,44 @@
   .cal-day.claimed::after { content:'✅'; position:absolute; top:2px; right:4px; font-size:.6rem; }
   
   .cal-day.active {
-    border-color:var(--accent); background:rgba(162,56,255,.08); color:var(--accent);
+    border-color:var(--accent); background:rgba(138,43,226,.08); color:var(--accent);
     animation: pulseActive 1.6s infinite alternate;
   }
   @keyframes pulseActive {
-    from{ box-shadow:0 0 3px rgba(162,56,255,.1); }
-    to{ box-shadow:0 0 10px rgba(162,56,255,.3); }
+    from{ box-shadow:0 0 3px rgba(138,43,226,.1); }
+    to{ box-shadow:0 0 10px rgba(138,43,226,.3); }
   }
   .cal-day.locked { opacity:.4; }
 
-  /* ESTILOS DA BATATA QUENTE (MULTIPLAYER LOBBY) */
+  /* ESTILOS MULTIPLAYER - NAVEGADOR DE SALAS (ROOM BROWSER) */
+  .rooms-container{ max-height:300px; overflow-y:auto; padding-right:4px; margin-bottom:14px; }
+  .rooms-container::-webkit-scrollbar { width:6px; }
+  .rooms-container::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+  
+  .room-card{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;
+    transition:all .2s;
+  }
+  .room-card:hover{ border-color:var(--accent); }
+  .room-info{ display:flex; flex-direction:column; gap:4px; }
+  .room-owner{ font-size:.9rem; font-weight:600; color:var(--text); }
+  .room-details{ font-size:.7rem; color:var(--text-dim); }
+  .room-status{
+    padding:4px 8px; border-radius:6px; font-size:.7rem; font-weight:700;
+    text-transform:uppercase; margin-bottom:6px; display:inline-block;
+  }
+  .room-status.lobby { background:rgba(38,224,122,.15); color:var(--success); }
+  .room-status.playing { background:rgba(255,77,77,.15); color:var(--danger); }
+  
+  .room-actions{ display:flex; flex-direction:column; gap:6px; width:100px; }
+  .btn-sm{
+    padding:8px; border-radius:6px; border:none; cursor:pointer; font-weight:700; font-size:.75rem;
+    font-family:var(--font-d); transition:opacity .15s;
+  }
+  .btn-sm-join{ background:var(--accent); color:#fff; }
+  .btn-sm-spec{ background:var(--panel); border:1px solid var(--line); color:var(--text); }
+
   .potato-lobby-list { display:flex; flex-wrap:wrap; gap:10px; margin:15px 0; max-height:120px; overflow-y:auto; }
   .potato-player {
     display:flex; align-items:center; gap:8px; background:var(--panel2);
@@ -153,6 +188,7 @@
   // Sincronizador da Batata Quente
   let potatoSyncInterval = null;
   let myUserId = null;
+  let activeRoomId = null; // Sala em que estou conectado
 
   async function init(){
     try {
@@ -176,7 +212,6 @@
       if (!tokenResp.ok) throw new Error(tokenData.error || 'falha ao trocar token');
       accessToken = tokenData.access_token;
 
-      // Autentica e salva o ID do próprio usuário que abriu
       const auth = await discordSdk.commands.authenticate({ access_token: accessToken });
       myUserId = auth.user.id;
 
@@ -252,19 +287,46 @@
         <button class="btn btn-play" id="closeDailyBtn" style="margin-top:8px;">Voltar</button>
       </div>
 
-      <!-- TELA DA BATATA QUENTE (MULTIPLAYER) -->
+      <!-- TELA DA BATATA QUENTE (NAVEGADOR DE SALAS) -->
+      <div class="panel" id="potatoBrowserPanel" style="display:none;">
+        <div class="potential" style="color:var(--text); font-weight:600; font-size:.95rem;">Salas de Batata Quente Ativas</div>
+        <div class="rooms-container" id="roomsContainer">
+          <div class="loading">Buscando salas...</div>
+        </div>
+        <button class="btn btn-play" id="openCreateRoomBtn">Criar Nova Sala</button>
+        <button class="btn" id="closeBrowserBtn" style="margin-top:8px; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Voltar ao Solo</button>
+      </div>
+
+      <!-- POPUP/MODAL CRIADOR DE SALA -->
+      <div class="panel" id="potatoCreatePanel" style="display:none;">
+        <div class="potential" style="color:var(--text); font-weight:600;">Configurar Minha Sala</div>
+        <div class="row">
+          <div class="field">
+            <label>Custo Entrada</label>
+            <input type="number" id="potBetAmount" value="10" min="1">
+          </div>
+          <div class="field">
+            <label>Minas (1-15)</label>
+            <input type="number" id="potMineCount" value="3" min="1" max="15">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Vagas Máximas (2-16)</label>
+          <input type="number" id="potMaxPlayers" value="8" min="2" max="16">
+        </div>
+        <button class="btn btn-cashout" id="submitCreateRoomBtn">Abrir Sala</button>
+        <button class="btn" id="cancelCreateRoomBtn" style="margin-top:8px; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Cancelar</button>
+      </div>
+
+      <!-- TELA DO TABULEIRO / LOBBY ATIVO DA BATATA QUENTE -->
       <div class="panel" id="potatoPanel" style="display:none;">
-        <div class="potential" id="potatoTitle">🔥 Batata Quente</div>
+        <div class="potential" id="potatoTitle">🔥 Carregando Sala...</div>
         
-        <!-- Estado do Lobby -->
+        <!-- Estado do Lobby Interno -->
         <div id="potatoLobbyZone">
           <div id="potatoConfigZone" style="margin-bottom: 12px;"></div>
           <div class="potato-lobby-list" id="potatoPlayers"></div>
-          <div class="row" style="margin-top: 14px; gap:8px;">
-            <button class="btn btn-cashout" id="joinPotatoBtn" style="flex:1;">Jogar (Custo: 10)</button>
-            <button class="btn" id="spectatePotatoBtn" style="flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text);">📺 Assistir</button>
-          </div>
-          <button class="btn btn-play" id="startPotatoBtn" style="margin-top:8px;" disabled>Iniciar Partida (Min: 2 Jogadores)</button>
+          <button class="btn btn-play" id="startPotatoBtn" style="margin-top:8px;" disabled>Iniciar Partida (Dono)</button>
         </div>
 
         <!-- Estado Ativo de Jogo -->
@@ -273,8 +335,7 @@
           <div class="grid" id="potatoGrid"></div>
         </div>
 
-        <!-- Botão de Voltar comum -->
-        <button class="btn btn-play" id="closePotatoBtn" style="margin-top:14px;">Sair da Batata Quente</button>
+        <button class="btn btn-play" id="leavePotatoBtn" style="margin-top:14px; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Sair da Sala</button>
       </div>
 
       <div class="status" id="statusMsg"></div>
@@ -288,12 +349,16 @@
     document.getElementById('closeDailyBtn').addEventListener('click', closeDaily);
     document.getElementById('claimDailyBtn').addEventListener('click', claimDaily);
     
-    // Listeners da Batata Quente
-    document.getElementById('potatoBtn').addEventListener('click', openPotato);
-    document.getElementById('closePotatoBtn').addEventListener('click', closePotato);
-    document.getElementById('joinPotatoBtn').addEventListener('click', joinPotato);
-    document.getElementById('spectatePotatoBtn').addEventListener('click', spectatePotato);
+    // Listeners do Lobby Browser
+    document.getElementById('potatoBtn').addEventListener('click', openPotatoBrowser);
+    document.getElementById('closeBrowserBtn').addEventListener('click', showSetupPanel);
+    document.getElementById('openCreateRoomBtn').addEventListener('click', openCreateRoomModal);
+    document.getElementById('cancelCreateRoomBtn').addEventListener('click', openPotatoBrowser);
+    document.getElementById('submitCreateRoomBtn').addEventListener('click', submitCreateRoom);
+    
+    // Listeners do Jogo Interno da Batata
     document.getElementById('startPotatoBtn').addEventListener('click', startPotato);
+    document.getElementById('leavePotatoBtn').addEventListener('click', leavePotato);
   }
 
   function setStatus(msg, type){
@@ -316,59 +381,150 @@
     }
   }
 
-  function showGamePanel(){
+  // ==========================================
+  // MULTIPLAYER - NAVEGADOR DE SALAS (ROOM BROWSER)
+  // ==========================================
+  async function openPotatoBrowser(){
+    setStatus('');
+    if (potatoSyncInterval) clearInterval(potatoSyncInterval);
+    activeRoomId = null;
+
     document.getElementById('setupPanel').style.display = 'none';
-    document.getElementById('gamePanel').style.display = 'block';
-    document.getElementById('leaderboardPanel').style.display = 'none';
-    document.getElementById('dailyPanel').style.display = 'none';
-    document.getElementById('potatoPanel').style.display = 'none';
-  }
-  function showSetupPanel(){
-    document.getElementById('setupPanel').style.display = 'block';
     document.getElementById('gamePanel').style.display = 'none';
     document.getElementById('leaderboardPanel').style.display = 'none';
     document.getElementById('dailyPanel').style.display = 'none';
     document.getElementById('potatoPanel').style.display = 'none';
-    currentGame = null;
+    document.getElementById('potatoCreatePanel').style.display = 'none';
+    document.getElementById('potatoBrowserPanel').style.display = 'block';
+
+    renderRoomsList();
+    potatoSyncInterval = setInterval(renderRoomsList, 2000); // atualiza fita de salas a cada 2 seg
   }
 
-  // ==========================================
-  // LÓGICA DA BATATA QUENTE (MULTIPLAYER)
-  // ==========================================
-  async function openPotato(){
+  async function renderRoomsList() {
+    try {
+      const data = await api('potato/rooms');
+      const container = document.getElementById('roomsContainer');
+      container.innerHTML = '';
+
+      if (!data.rooms || data.rooms.length === 0) {
+        container.innerHTML = `<div class="loading" style="font-size:12px;">Nenhuma sala ativa encontrada.<br>Crie a sua agora mesmo!</div>`;
+        return;
+      }
+
+      data.rooms.forEach(room => {
+        const card = document.createElement('div');
+        card.className = 'room-card';
+
+        const stateClass = room.state === 'LOBBY' ? 'lobby' : 'playing';
+        const stateText = room.state === 'LOBBY' ? 'Lobby' : 'Em Jogo';
+
+        card.innerHTML = `
+          <div class="room-info">
+            <span class="room-status ${stateClass}">${stateText}</span>
+            <span class="room-owner">Sala de ${room.ownerName}</span>
+            <span class="room-details">💰 Aposta: ${room.betAmountFormatted} | Vagas: ${room.playersCount}/${room.maxPlayers}</span>
+          </div>
+          <div class="room-actions">
+            ${room.state === 'LOBBY' ? `<button class="btn-sm btn-sm-join" onclick="joinPotatoRoom('${room.roomId}')">Jogar</button>` : ''}
+            <button class="btn-sm btn-sm-spec" onclick="spectatePotatoRoom('${room.roomId}')">📺 Assistir</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function openCreateRoomModal() {
+    if (potatoSyncInterval) clearInterval(potatoSyncInterval);
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
+    document.getElementById('potatoCreatePanel').style.display = 'block';
+  }
+
+  async function submitCreateRoom() {
+    const betAmount = parseFloat(document.getElementById('potBetAmount').value);
+    const mineCount = parseInt(document.getElementById('potMineCount').value);
+    const maxPlayers = parseInt(document.getElementById('potMaxPlayers').value);
     setStatus('');
-    document.getElementById('setupPanel').style.display = 'none';
-    document.getElementById('gamePanel').style.display = 'none';
-    document.getElementById('leaderboardPanel').style.display = 'none';
-    document.getElementById('dailyPanel').style.display = 'none';
+
+    try {
+      const data = await api('potato/create', { betAmount, mineCount, maxPlayers });
+      if (data.success) {
+        activeRoomId = data.roomId;
+        openPotatoRoom();
+      }
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  // Definições de Click globais para as funções do card do Lobby
+  window.joinPotatoRoom = async (roomId) => {
+    try {
+      await api('potato/join', { roomId });
+      activeRoomId = roomId;
+      openPotatoRoom();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  window.spectatePotatoRoom = async (roomId) => {
+    try {
+      await api('potato/spectate', { roomId });
+      activeRoomId = roomId;
+      openPotatoRoom();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  // ==========================================
+  // LÓGICA DO LOBBY INTERNO / PARTIDA DA BATATA
+  // ==========================================
+  async function openPotatoRoom() {
+    if (potatoSyncInterval) clearInterval(potatoSyncInterval);
+    
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
+    document.getElementById('potatoCreatePanel').style.display = 'none';
     document.getElementById('potatoPanel').style.display = 'block';
 
     syncPotato();
-    potatoSyncInterval = setInterval(syncPotato, 1000);
+    potatoSyncInterval = setInterval(syncPotato, 1000); // Polling rápido interno de 1 segundo
   }
 
   async function syncPotato() {
+    if (!activeRoomId) return;
     try {
-      const data = await api('potato/state');
-      
-      const sResp = await fetch('/api/mines/state', {
+      const resp = await fetch(`/api/mines/potato/state?roomId=${activeRoomId}`, {
         headers: { 'Authorization': 'Bearer ' + accessToken }
       });
-      const sData = await sResp.json();
-      if (sResp.ok) document.getElementById('saldoVal').textContent = sData.saldoFormatado;
+      const data = await resp.json();
 
-      // Renderiza as configurações de Vagas do Lobby
-      const configZone = document.getElementById('potatoConfigZone');
+      if (!resp.ok) {
+        // Se a sala não existir mais (foi deletada pelo dono que saiu)
+        setStatus(data.error || 'A sala foi fechada pelo dono.', 'error');
+        closePotato();
+        return;
+      }
+
       if (data.state === 'LOBBY') {
+        document.getElementById('potatoLobbyZone').style.display = 'block';
+        document.getElementById('potatoGameZone').style.display = 'none';
+        document.getElementById('potatoTitle').textContent = `🔥 Sala de ${data.players[0].username} (Pote: ${data.potFormatted})`;
+
+        // Configuração de Vagas do Dono
+        const configZone = document.getElementById('potatoConfigZone');
         const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
         if (isOwner) {
           configZone.innerHTML = `
             <div class="field">
-              <label>⚙️ Vagas na Sala (Dono):</label>
+              <label>👥 Alterar Limite de Vagas:</label>
               <input type="number" id="potatoMaxPlayersInput" value="${data.maxPlayers}" min="2" max="16" style="padding: 6px 12px; margin-top: 4px;">
             </div>
           `;
-          // Listener para atualizar vagas ao mudar o número
           const input = document.getElementById('potatoMaxPlayersInput');
           input.onchange = async (e) => {
             try {
@@ -378,14 +534,6 @@
         } else {
           configZone.innerHTML = `<p style="text-align:center; font-size:.8rem; color:var(--text-dim);">👥 Vagas na Sala: <b>${data.players.length} de ${data.maxPlayers}</b></p>`;
         }
-      } else {
-        configZone.innerHTML = '';
-      }
-
-      if (data.state === 'LOBBY') {
-        document.getElementById('potatoLobbyZone').style.display = 'block';
-        document.getElementById('potatoGameZone').style.display = 'none';
-        document.getElementById('potatoTitle').textContent = `🔥 Batata Quente (Pote: ${data.potFormatted})`;
 
         // Lista jogadores ativos
         const container = document.getElementById('potatoPlayers');
@@ -397,28 +545,15 @@
           container.appendChild(el);
         });
 
-        // Configura botões de Ações (Entrar / Assistir)
-        const alreadyIn = data.isPlayer;
-        const alreadySpectating = data.isSpectator;
-
-        const joinBtn = document.getElementById('joinPotatoBtn');
-        joinBtn.disabled = alreadyIn || data.players.length >= data.maxPlayers;
-        joinBtn.textContent = alreadyIn ? 'No Jogo (Aguardando...)' : 'Jogar (Custo: 10)';
-
-        const specBtn = document.getElementById('spectatePotatoBtn');
-        specBtn.disabled = alreadyIn || alreadySpectating;
-        specBtn.textContent = alreadySpectating ? '📺 Assistindo' : '📺 Assistir';
-
+        // Configura botão de Começar (apenas dono)
         const startBtn = document.getElementById('startPotatoBtn');
-        // Só o primeiro jogador (dono da sala) pode iniciar a partida
-        const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
         startBtn.disabled = data.players.length < 2 || !isOwner;
       } 
       
       else if (data.state === 'PLAYING') {
         document.getElementById('potatoLobbyZone').style.display = 'none';
         document.getElementById('potatoGameZone').style.display = 'block';
-        document.getElementById('potatoTitle').textContent = `🔥 Batata Quente (Prêmio: ${data.potFormatted} | 👀 ${data.spectatorsCount})`;
+        document.getElementById('potatoTitle').textContent = `🔥 Jogo de ${data.players[0].username} (Prêmio: ${data.potFormatted} | 👀 ${data.spectatorsCount})`;
 
         // Quem joga agora?
         const isMyTurn = data.activePlayer.id === myUserId;
@@ -431,7 +566,7 @@
           indicator.style.color = '#ffaa00';
         }
 
-        // Desenha a grade (Se for espectador, não clica em nada)
+        // Desenha a grade
         drawPotatoGrid(data, isMyTurn && !data.isSpectator);
       }
 
@@ -446,29 +581,28 @@
         drawPotatoGrid(data, false);
 
         // Mostra quem faturou
-        let winMsg = '💰 Prêmios divididos para os sobreviventes:<br>';
+        let winMsg = '💰 Sobreviventes ganharam:<br>';
         data.winners.forEach(w => {
           winMsg += `<b>${w.username}</b> faturou <b>${w.winShare}</b>!<br>`;
         });
-
         document.getElementById('potatoTitle').innerHTML = winMsg;
 
-        // Se for o dono da sala, pode resetar o lobby
+        // Dono pode resetar, outros esperam ou saem
         const isOwner = data.players.length > 0 && data.players[0].id === myUserId;
-        const joinBtn = document.getElementById('joinPotatoBtn');
+        const startBtn = document.getElementById('startPotatoBtn');
         
         if (isOwner) {
-          joinBtn.disabled = false;
-          joinBtn.textContent = 'Jogar Novamente (Resetar Lobby)';
-          joinBtn.onclick = async () => {
-            await api('potato/reset');
-            joinBtn.onclick = joinPotato;
+          document.getElementById('potatoLobbyZone').style.display = 'block';
+          document.getElementById('potatoConfigZone').innerHTML = '';
+          document.getElementById('potatoPlayers').innerHTML = '';
+          startBtn.disabled = false;
+          startBtn.textContent = 'Jogar Novamente (Resetar Sala)';
+          startBtn.onclick = async () => {
+            await api('potato/reset', { roomId: activeRoomId });
+            startBtn.textContent = 'Iniciar Partida (Dono)';
+            startBtn.onclick = startPotato;
             syncPotato();
           };
-          document.getElementById('potatoLobbyZone').style.display = 'block';
-        } else {
-          joinBtn.disabled = true;
-          joinBtn.textContent = 'Aguardando Dono Resetar...';
         }
       }
     } catch (e) {
@@ -504,30 +638,10 @@
     }
   }
 
-  async function joinPotato() {
-    setStatus('');
-    try {
-      await api('potato/join');
-      syncPotato();
-    } catch (e) {
-      setStatus(e.message, 'error');
-    }
-  }
-
-  async function spectatePotato() {
-    setStatus('');
-    try {
-      await api('potato/spectate');
-      syncPotato();
-    } catch (e) {
-      setStatus(e.message, 'error');
-    }
-  }
-
   async function startPotato() {
     setStatus('');
     try {
-      await api('potato/start');
+      await api('potato/start', { roomId: activeRoomId });
       syncPotato();
     } catch (e) {
       setStatus(e.message, 'error');
@@ -536,8 +650,18 @@
 
   async function clickPotato(index) {
     try {
-      await api('potato/click', { squareIndex: index });
+      await api('potato/click', { roomId: activeRoomId, squareIndex: index });
       syncPotato();
+    } catch (e) {
+      setStatus(e.message, 'error');
+    }
+  }
+
+  async function leavePotato() {
+    setStatus('');
+    try {
+      await api('potato/leave', { roomId: activeRoomId });
+      closePotato();
     } catch (e) {
       setStatus(e.message, 'error');
     }
@@ -545,6 +669,7 @@
 
   function closePotato(){
     if (potatoSyncInterval) clearInterval(potatoSyncInterval);
+    activeRoomId = null;
     refreshState();
     showSetupPanel();
   }
@@ -561,6 +686,7 @@
     document.getElementById('leaderboardPanel').style.display = 'none';
     document.getElementById('dailyPanel').style.display = 'block';
     document.getElementById('potatoPanel').style.display = 'none';
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
 
     try {
       const data = await api('daily/state');
@@ -664,6 +790,7 @@
     document.getElementById('gamePanel').style.display = 'none';
     document.getElementById('dailyPanel').style.display = 'none';
     document.getElementById('potatoPanel').style.display = 'none';
+    document.getElementById('potatoBrowserPanel').style.display = 'none';
     document.getElementById('leaderboardPanel').style.display = 'block';
     document.getElementById('rankList').innerHTML = `<div class="loading">Carregando Top 50...</div>`;
     
