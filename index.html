@@ -349,7 +349,7 @@
           <div class="grid" id="potatoGrid"></div>
         </div>
 
-        <button class="btn btn-play" id="leavePotatoBtn" style="margin-top:14px; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Sair da Sala</button>
+        <button class="btn btn-play" id="leavePotatoBtn" style="margin-top:14px; display:none; background:var(--panel2); border:1px solid var(--line); color:var(--text);">Sair da Sala</button>
       </div>
 
       <div class="status" id="statusMsg"></div>
@@ -563,6 +563,7 @@
       if (data.state === 'LOBBY') {
         document.getElementById('potatoLobbyZone').style.display = 'block';
         document.getElementById('potatoGameZone').style.display = 'none';
+        document.getElementById('leavePotatoBtn').style.display = 'block';
         document.getElementById('potatoTitle').textContent = `🔥 Sala de ${data.players[0].username} (Pote: ${data.potFormatted})`;
 
         // Configuração de Vagas e Tempo do Dono
@@ -628,6 +629,8 @@
       else if (data.state === 'PLAYING') {
         document.getElementById('potatoLobbyZone').style.display = 'none';
         document.getElementById('potatoGameZone').style.display = 'block';
+        // Botão de sair não deve existir durante a partida (jogador ativo)
+        document.getElementById('leavePotatoBtn').style.display = data.isSpectator ? 'block' : 'none';
         document.getElementById('potatoTitle').textContent = `🔥 Jogo de ${data.players[0].username} (Prêmio: ${data.potFormatted} | 👀 ${data.spectatorsCount})`;
 
         // Calcula tempo restante do turno do jogador ativo (Ticking em tempo real)
@@ -649,6 +652,7 @@
       else if (data.state === 'ENDED') {
         document.getElementById('potatoLobbyZone').style.display = 'none';
         document.getElementById('potatoGameZone').style.display = 'block';
+        document.getElementById('leavePotatoBtn').style.display = 'block';
         
         const indicator = document.getElementById('potatoTurnIndicator');
         indicator.textContent = `💥 BOOM! ${data.loser.username} explodiu!`;
